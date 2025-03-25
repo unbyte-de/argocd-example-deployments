@@ -1,0 +1,17 @@
+---
+service:
+  type: ClusterIP
+tls:
+  enabled: false
+
+serverBlock: |-
+  server {
+    listen 0.0.0.0:8080;
+    location / {
+      return 200 "hello!";
+    }
+  }
+
+extraEnvVars:
+  - name: LOG_LEVEL
+    value: debug

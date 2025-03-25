@@ -1,0 +1,8 @@
+---
+chart: cert-manager
+repo: https://charts.jetstack.io
+version: 1.16.1
+releaseName: cert-manager
+namespace: cert-manager-test
+configFiles:
+- config.yaml

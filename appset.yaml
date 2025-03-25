@@ -1,0 +1,65 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: example
+  namespace: argocd
+spec:
+  generators:
+  - git:
+      files:
+      - path: dev/*/deploy.yaml
+      repoURL: https://github.com/unbyte-de/argocd-example-deployments.git
+      revision: HEAD
+      values:
+        appRepoPathURL: https://github.com/unbyte-de/argocd-example-deployments/-/tree/main/{{.path.path}}
+        appValuesRepoURL: https://github.com/unbyte-de/argocd-example-deployments.git
+  goTemplate: true
+  syncPolicy:
+    applicationsSync: sync
+  template:
+    metadata:
+      name: '{{.releaseName}}'
+    spec:
+      destination:
+        namespace: '{{.namespace}}'
+        server: https://kubernetes.default.svc
+      info:
+      - name: 'Git URL:'
+        value: '{{.values.appRepoPathURL}}'
+      project: 'default'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        retry:
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m
+          limit: 5
+        syncOptions:
+        - Validate=true
+        - CreateNamespace=true
+        - PrunePropagationPolicy=foreground
+        - PruneLast=true
+  templatePatch: |
+    spec:
+      sources:
+      {{ if hasPrefix "oci://" .repo }}
+      - repoURL: '{{ trimSuffix (printf "/%s" .chart) (trimPrefix "oci://" .repo) }}'
+      {{ else }}
+      - repoURL: '{{ .repo }}'
+      {{ end }}
+        targetRevision: '{{.version}}'
+        chart: '{{.chart}}'
+        helm:
+          releaseName: '{{.releaseName}}'
+          {{- if .configFiles }}
+          valueFiles:
+          {{- range $cf := .configFiles }}
+          - $configvalues/{{$.path.path}}/{{ $cf }}
+          {{- end }}
+          {{- end }}
+      - repoURL: '{{.values.appValuesRepoURL}}'
+        targetRevision: HEAD
+        ref: configvalues
